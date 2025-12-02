@@ -1,25 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using IBM.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using Microsoft.Extensions.Configuration;
-using System.IO;
-using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore.Design;
-using System.Globalization;
-using System.ComponentModel.DataAnnotations;
-using IBM.EntityFrameworkCore;
-using IBM.EntityFrameworkCore.Storage.Internal;
-using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-using System.Collections.Generic;
-using System.Windows.Documents;
 
 namespace WPF_EF_Core
-{    
+{
     public class UserData
     {
         [Key]
@@ -55,10 +51,10 @@ namespace WPF_EF_Core
         {
             get { return dateValue; }
             set { dateValue = value; OnPropertyChanged("DateValue"); }
-        }        
+        }
 
         public event PropertyChangedEventHandler PropertyChanged;
-        public void OnPropertyChanged([CallerMemberName]string prop = "")
+        public void OnPropertyChanged([CallerMemberName] string prop = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
         }
@@ -106,11 +102,11 @@ namespace WPF_EF_Core
     public class ApplicationContext : DbContext
     {
         public DbSet<UserData> UsersData { get; set; }
-        
+
         public ApplicationContext(DbContextOptions<ApplicationContext> options, String p_database_type) : base(options)
         {
             if (p_database_type == "Oracle")
-            {                
+            {
                 try
                 {
                     Database.EnsureCreated();
@@ -120,12 +116,12 @@ namespace WPF_EF_Core
                     if (!e.Message.StartsWith("ORA-00955:"))  //  имя уже задействовано для существующего объекта
                     {
                         throw new ArgumentException(e.Message);
-                    }                        
+                    }
                 }
-                } 
+            }
             else if (p_database_type == "Azure SQL Database" || p_database_type == "IBM DB2" || p_database_type == "IBM Informix") { /*Ничего не делаем база уже создана*/ }
-            else 
-              Database.EnsureCreated();
+            else
+                Database.EnsureCreated();
 
             //Database.EnsureDeleted();   // удаляем бд со старой схемой
             //Database.EnsureCreated();   // создаем бд с новой схемой            
@@ -140,21 +136,21 @@ namespace WPF_EF_Core
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
-    {        
+    {
         readonly bool is_initialize = true;
         bool is_filter = false;
-        static string ConnectionStringGlobal = "";        
+        static string ConnectionStringGlobal = "";
 
         public MainWindow()
         {
             InitializeComponent();
 
-            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);            
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
             is_initialize = false;
             string database_type = "SQLite";
-            try 
-            { 
+            try
+            {
                 using ApplicationContext db = new(LoadConfiguration(database_type), database_type);
                 UpdateDatagrid(db);
             }
@@ -170,13 +166,13 @@ namespace WPF_EF_Core
         // Microsoft.Extensions.Configuration.Json;
         public static DbContextOptions<ApplicationContext> LoadConfiguration(string database_type)
         {
-            var builder = new ConfigurationBuilder() 
+            var builder = new ConfigurationBuilder()
                                     .SetBasePath(Directory.GetCurrentDirectory()) // установка пути к текущему каталогу
                                     .AddJsonFile("appsettings.json"); // получаем конфигурацию из файла appsettings.json                                    
             // создаем конфигурацию
             var config = builder.Build();
             // получаем строку подключения
-            string conn_string = "";            
+            string conn_string = "";
             if (database_type == "SQLite") conn_string = "DefaultConnectionSQLite";
             else if (database_type == "MS SQL Server Local") conn_string = "DefaultConnectionMSSQLLocal";
             else if (database_type == "MS SQL Server") conn_string = "DefaultConnectionMSSQL";
@@ -192,33 +188,36 @@ namespace WPF_EF_Core
             // строка подключения
             string connectionString = config.GetConnectionString(conn_string);
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationContext>();
-            
+
             // разбираем строку подключения
             string[] parts = connectionString.Split(";");
             string LoginValue = ""; string LoginText = ""; string LoginName = "";
             string PasswordValue = ""; string PasswordText = ""; string PasswordName = "";
             foreach (string part in parts)
             {
-                if (string.IsNullOrEmpty(part)) continue;                
+                if (string.IsNullOrEmpty(part)) continue;
                 string partn = part.Replace(" ", "").ToLower();
 
                 if ((conn_string == "DefaultConnectionSQLite") || (partn.Contains("trusted_connection=true")))
                 {
                     LoginValue = "+"; PasswordValue = "+";
                     break;
-                }                                        
-
-                if (partn.Contains("userid=")) {
-                    LoginText = part;
-                    LoginName = part[0..(part.IndexOf(Convert.ToChar("=")))];
-                    LoginValue = part[(part.IndexOf(Convert.ToChar("=")) + 1)..].Replace(" ","");
                 }
-                if (partn.Contains("user=")) {
+
+                if (partn.Contains("userid="))
+                {
                     LoginText = part;
                     LoginName = part[0..(part.IndexOf(Convert.ToChar("=")))];
                     LoginValue = part[(part.IndexOf(Convert.ToChar("=")) + 1)..].Replace(" ", "");
                 }
-                if (partn.Contains("username=")) {
+                if (partn.Contains("user="))
+                {
+                    LoginText = part;
+                    LoginName = part[0..(part.IndexOf(Convert.ToChar("=")))];
+                    LoginValue = part[(part.IndexOf(Convert.ToChar("=")) + 1)..].Replace(" ", "");
+                }
+                if (partn.Contains("username="))
+                {
                     LoginText = part;
                     LoginName = part[0..(part.IndexOf(Convert.ToChar("=")))];
                     LoginValue = part[(part.IndexOf(Convert.ToChar("=")) + 1)..].Replace(" ", "");
@@ -229,12 +228,14 @@ namespace WPF_EF_Core
                     LoginName = part[0..(part.IndexOf(Convert.ToChar("=")))];
                     LoginValue = part[(part.IndexOf(Convert.ToChar("=")) + 1)..].Replace(" ", "");
                 }
-                if (partn.Contains("Password=")) {
+                if (partn.Contains("Password="))
+                {
                     PasswordText = part;
                     PasswordName = part[0..(part.IndexOf(Convert.ToChar("=")))];
                     PasswordValue = part[(part.IndexOf(Convert.ToChar("=")) + 1)..].Replace(" ", "");
                 }
-                if (partn.Contains("password=")) {
+                if (partn.Contains("password="))
+                {
                     PasswordText = part;
                     PasswordName = part[0..(part.IndexOf(Convert.ToChar("=")))];
                     PasswordValue = part[(part.IndexOf(Convert.ToChar("=")) + 1)..].Replace(" ", "");
@@ -250,7 +251,7 @@ namespace WPF_EF_Core
             // вызываем если нужно форму для ввода логина и пароля
             if ((LoginValue == "" || PasswordValue == "") && ConnectionStringGlobal == "")
             {
-                PasswordWindow passWin = new(new UserLogin { LoginValue = LoginValue, PasswordValue = PasswordValue});
+                PasswordWindow passWin = new(new UserLogin { LoginValue = LoginValue, PasswordValue = PasswordValue });
                 if (passWin.ShowDialog() == true)
                 {
                     UserLogin ul = passWin.UserLoginAdd;
@@ -265,7 +266,7 @@ namespace WPF_EF_Core
                         {
                             connectionString = connectionString.Replace(PasswordText, PasswordName + "=" + ul.PasswordValue);
                             ConnectionStringGlobal = connectionString;
-                        }                        
+                        }
                     }
                 }
             }
@@ -277,7 +278,7 @@ namespace WPF_EF_Core
             // MS SQL Server Local по умолчанию
             var options = optionsBuilder
                     .UseSqlServer(connectionString)
-                    .UseLoggerFactory(MyLoggerFactory)                    
+                    .UseLoggerFactory(MyLoggerFactory)
                     .Options;
 
             if (database_type == "MS SQL Server Local")
@@ -325,8 +326,8 @@ namespace WPF_EF_Core
                 optionsBuilder = new DbContextOptionsBuilder<ApplicationContext>();
                 options = optionsBuilder
                     .UseNpgsql(connectionString)
-                    .UseLoggerFactory(MyLoggerFactory)                                        
-                    .Options;                
+                    .UseLoggerFactory(MyLoggerFactory)
+                    .Options;
             }
             else if (database_type == "Azure SQL Database")
             {
@@ -386,23 +387,23 @@ namespace WPF_EF_Core
             //Database.Scaffolding: категория для действий, выполняемых в поцессе обратного инжиниринга(то есть когда по базе данных генерируются классы и класс контекста)
             //Database.Update: категория для сообщений вызова DbContext.SaveChanges()
             //Database.Infrastructure: категория для всех остальных сообщений
-            
+
             builder.AddFilter((category, level) => category == DbLoggerCategory.Database.Command.Name
                                     && level == LogLevel.Information)
                     .AddProvider(new MyLoggerProvider()); // указываем наш провайдер логгирования
-            
+
 
             // или стандартный от Microsoft
             // NuGet - Microsoft.Extensions.Logging.Console
             //builder.AddConsole();
         });
 
-        private void UpdateDatagrid(ApplicationContext db)                
+        private void UpdateDatagrid(ApplicationContext db)
         {
             if (is_initialize == true) return;
             if (is_filter == false)
             {
-                DataGrid1.ItemsSource = db.UsersData.ToList();                 
+                DataGrid1.ItemsSource = db.UsersData.ToList();
             }
             else
             {
@@ -445,28 +446,28 @@ namespace WPF_EF_Core
                     m_er = DateTime.TryParseExact(m_value1, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime m_value1_dat);
                     m_er = DateTime.TryParseExact(m_value2, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime m_value2_dat);
                     DataGrid1.ItemsSource = db.UsersData.ToList().Where(p => p.DateValue >= m_value1_dat && p.DateValue <= m_value2_dat);
-                }                
+                }
             }
             this.DataContext = DataGrid1.ItemsSource; //db.UsersData.ToList();
 
             // Выделить сроку с курсором
             if (DataGrig_Id == null && DataGrid1.Items.Count > 0) DataGrig_Id = 1;
 
-            if (DataGrig_Id != null && DataGrid1.Items.Count > 0) 
+            if (DataGrig_Id != null && DataGrid1.Items.Count > 0)
             {
                 foreach (UserData drv in DataGrid1.ItemsSource)
                 {
-                    if ( drv.Id == DataGrig_Id)
+                    if (drv.Id == DataGrig_Id)
                     {
                         DataGrid1.SelectedItem = drv;
                         DataGrid1.ScrollIntoView(drv);
                         DataGrid1.Focus();
                         break;
                     }
-                }             
-            }            
+                }
+            }
         }
-        
+
         // изменение типа базы данных
         private void Database_type_SelectedIndexChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -474,14 +475,14 @@ namespace WPF_EF_Core
             ComboBoxItem selectedItem = (ComboBoxItem)comboBox.SelectedItem;
             String database_type = selectedItem.Content.ToString();
             ConnectionStringGlobal = "";
-            
+
             // пока не поддерживает .net            
             if (database_type == "IBM Informix")
             {
                 MessageBox("Пока не поддерживает текущую версию .NET, макс. версия .NET 6.0", System.Windows.MessageBoxImage.Error);
                 DataGrid1.ItemsSource = null;
                 return;
-            }            
+            }
             //
             try
             {
@@ -492,7 +493,7 @@ namespace WPF_EF_Core
             {
                 MessageBox(ex.Message, System.Windows.MessageBoxImage.Error);
                 DataGrid1.ItemsSource = null;
-            }            
+            }
         }
 
         // добавить запись
@@ -500,7 +501,7 @@ namespace WPF_EF_Core
         {
             AddWindow addWin = new(new UserData());
             if (addWin.ShowDialog() == true)
-            {                
+            {
                 UserData ud = addWin.UserDataAdd;
                 string database_type = this.database_type.Text.ToString();
                 try
@@ -515,7 +516,7 @@ namespace WPF_EF_Core
                     MessageBox(ex.Message, System.Windows.MessageBoxImage.Error);
                     DataGrid1.ItemsSource = null;
                 }
-            }            
+            }
         }
 
         // изменить запись
@@ -533,14 +534,14 @@ namespace WPF_EF_Core
                 IntValue = ud.IntValue,
                 DoubleValue = ud.DoubleValue,
                 BoolValue = ud.BoolValue,
-                DateValue = ud.DateValue                
-            }); 
+                DateValue = ud.DateValue
+            });
 
             if (addWin.ShowDialog() == true)
             {
                 // получаем измененный объект
                 string database_type = this.database_type.Text.ToString();
-                try 
+                try
                 {
                     using ApplicationContext db = new(LoadConfiguration(database_type), database_type);
                     ud = db.UsersData.Find(addWin.UserDataAdd.Id);
@@ -556,13 +557,13 @@ namespace WPF_EF_Core
                         {
                             db.Entry(ud).State = EntityState.Modified;
                             db.SaveChanges();
-                            UpdateDatagrid(db);                        
+                            UpdateDatagrid(db);
                             MessageBox("Запись обновлена");
                         }
                         catch (DbUpdateConcurrencyException)
                         {
                             MessageBox("Запись заблокирована другим пользователем", System.Windows.MessageBoxImage.Warning);
-                            UpdateDatagrid(db);                        
+                            UpdateDatagrid(db);
                         }
                     }
                 }
@@ -587,7 +588,7 @@ namespace WPF_EF_Core
                     // получаем выделенный объект
                     UserData ud = DataGrid1.SelectedItem as UserData;
                     string database_type = this.database_type.Text.ToString();
-                    try 
+                    try
                     {
                         using ApplicationContext db = new(LoadConfiguration(database_type), database_type);
                         db.UsersData.Remove(ud);
@@ -599,9 +600,9 @@ namespace WPF_EF_Core
                         MessageBox(ex.Message, System.Windows.MessageBoxImage.Error);
                         DataGrid1.ItemsSource = null;
                     }
-                    MessageBox("Запись удалена");                    
+                    MessageBox("Запись удалена");
                     break;
-                case MessageBoxResult.No:                    
+                case MessageBoxResult.No:
                     break;
             }
         }
@@ -610,8 +611,8 @@ namespace WPF_EF_Core
         private void Button_selectClick(object sender, RoutedEventArgs e)
         {
             string database_type = this.database_type.Text.ToString();
-            try 
-            { 
+            try
+            {
                 using ApplicationContext db = new(LoadConfiguration(database_type), database_type);
                 UpdateDatagrid(db);
             }
@@ -648,17 +649,18 @@ namespace WPF_EF_Core
             try
             {
                 var row_list = (UserData)DataGrid1.SelectedItem;
-                if (row_list != null)  
-                      DataGrig_Id = row_list.Id;                
+                if (row_list != null)
+                    DataGrig_Id = row_list.Id;
             }
-            catch {
+            catch
+            {
                 DataGrig_Id = null;
             }
         }
 
         private void DataGrid_MouseDoubleClick(object sender, RoutedEventArgs e)
         {
-            Button_updateClick(sender, e);            
+            Button_updateClick(sender, e);
         }
 
         // применить фильтр
@@ -666,8 +668,8 @@ namespace WPF_EF_Core
         {
             is_filter = true;
             string database_type = this.database_type.Text.ToString();
-            try 
-            { 
+            try
+            {
                 using ApplicationContext db = new(LoadConfiguration(database_type), database_type);
                 UpdateDatagrid(db);
             }
@@ -685,8 +687,8 @@ namespace WPF_EF_Core
             value1.Text = "";
             value2.Text = "";
             string database_type = this.database_type.Text.ToString();
-            try 
-            { 
+            try
+            {
                 using ApplicationContext db = new(LoadConfiguration(database_type), database_type);
                 UpdateDatagrid(db);
             }
@@ -695,7 +697,7 @@ namespace WPF_EF_Core
                 MessageBox(ex.Message, System.Windows.MessageBoxImage.Error);
                 DataGrid1.ItemsSource = null;
             }
-        }      
+        }
 
         // изменение типа данных
         private void Value_type_SelectedIndexChanged(object sender, SelectionChangedEventArgs e)
@@ -707,18 +709,18 @@ namespace WPF_EF_Core
             String value_type = selectedItem.Content.ToString();
 
             if (value_type == "id") value2.IsEnabled = true;
-            else if (value_type == "text") {value2.IsEnabled = false; value2.Text = ""; }
+            else if (value_type == "text") { value2.IsEnabled = false; value2.Text = ""; }
             else if (value_type == "int") value2.IsEnabled = true;
             else if (value_type == "double") value2.IsEnabled = true;
             else if (value_type == "bool") { value2.IsEnabled = false; value2.Text = ""; }
-            else if (value_type == "date") value2.IsEnabled = true;            
+            else if (value_type == "date") value2.IsEnabled = true;
         }
 
         // изменение фокуса на value2
         private void Value2_GotKeyboardFocus(object sender, EventArgs e)
         {
             if (value1.Text != "") value2.Text = value1.Text;
-        }        
+        }
 
         // логирование действий с базой данных -> log.txt (свой провайдер)        
         public class MyLoggerProvider : ILoggerProvider
@@ -745,11 +747,11 @@ namespace WPF_EF_Core
                 //BeginScope: этот метод возвращает объект IDisposable, который представляет некоторую область видимости для логгера.В данном случае нам этот метод не важен, поэтому возвращаем значение null
                 //IsEnabled: возвращает значения true или false, которые указывает, доступен ли логгер для использования.Здесь можно здать различную логику. В частности, в этот метод передается объект LogLevel, и мы можем, к примеру, задействовать логгер в зависимости от значения этого объекта. Но в данном случае просто возвращаем true, то есть логгер доступен всегда.
                 //Log: этот метод предназначен для выполнения логгирования. Он принимает пять параметров:
-                    //LogLevel: уровень детализации текущего сообщения
-                    //EventId: идентификатор события
-                    //TState: некоторый объект состояния, который хранит сообщение
-                    //Exception: информация об исключении
-                    //formatter: функция форматирования, которая с помощью двух предыдущих параметров позволяет получить собственно сообщение для логгирования               
+                //LogLevel: уровень детализации текущего сообщения
+                //EventId: идентификатор события
+                //TState: некоторый объект состояния, который хранит сообщение
+                //Exception: информация об исключении
+                //formatter: функция форматирования, которая с помощью двух предыдущих параметров позволяет получить собственно сообщение для логгирования               
                 public void Log<TState>(LogLevel logLevel, EventId eventId,
                         TState state, Exception exception, Func<TState, Exception, string> formatter)
                 {
