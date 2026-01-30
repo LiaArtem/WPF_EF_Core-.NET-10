@@ -77,7 +77,7 @@
                         <ComboBoxItem Content="IBM DB2"/>
                         <ComboBoxItem Content="IBM Informix"/>
                         <ComboBoxItem Content="Firebird"/>
-                    </ComboBox>
+                </ComboBox>
                     <GroupBox Header="Действия" Canvas.Left ="5" Canvas.Top="40" MinWidth="340" MinHeight="190">
                     <Canvas>
                         <Button x:Name="button_insert" Template="{StaticResource btTemplate}" Content="Добавить запись" Canvas.Left ="10" Canvas.Top="10" MinWidth="310" MinHeight="30" Click="Button_insertClick"/>

@@ -368,7 +368,7 @@ namespace WPF_EF_Core
                     .UseDb2(connectionString, p => p.SetServerInfo(IBMDBServerType.IDS))
                     .UseLoggerFactory(MyLoggerFactory)
                     .Options;
-            }
+            }            
 
             return options;
         }
